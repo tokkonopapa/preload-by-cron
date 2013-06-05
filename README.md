@@ -2,7 +2,7 @@ Preload by Cron
 ===============
 
 ### Description:
-It crawls your WordPress pages based on sitemap.xml to make pages being cached.
+It crawls your WordPress pages to make pages being cached based on sitemap.xml 
 (ex: [Google XML Sitemaps][GXS]).
 
 If you are using some of WordPress caching plugins, this will always keep 
@@ -21,7 +21,7 @@ every page is almost always cached.
 This **is not** a WordPress plugin.
 Call preload.php directly from your server's cron.
 
-	preload.php?key=your-secret-key&requests=10&interval=100&debug
+	preload.php?key=your-secret-key&requests=10&interval=100&debug=1
 
 where:
 
@@ -31,6 +31,7 @@ where:
 * `timeout`: A timeout in seconds for each fetch.
 * `limit`: Maximum execution time in seconds.
 * `delay`: Initial delay to wait garbage collection.
+* `split`: A number of requests per preloading.
 * `debug`: Output to log file.
 
 [secret key generator - WordPress API][SKG] is useful for generating `your-secret-key`.
@@ -46,8 +47,8 @@ and this plugin needs `Y` seconds to crawl whole of your site,
 then you should reset the period of garbage collection to `(X - Y)` seconds.
 
 ### Todo:
-- [ ] handle errors and exceptions.
-- [ ] additional crawl with smart phone UA.
+- [x] handle errors and exceptions.
+- [x] additional crawl with smart phone UA.
 - [x] loosely synchronize with cache garbage collection via WP-Cron Control.
 
 ### Similar plugins:
