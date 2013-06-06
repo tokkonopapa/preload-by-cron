@@ -67,7 +67,7 @@ if ( ! isset( $_GET['key'] ) || $_GET['key'] != 'your-secret-key' ) {
  * @link http://wordpress.org/extend/plugins/wp-cron-control/
  * @example http://example.com/wp-cron.php?doing_wp_cron&secret_string
  */
-$garbage_collector = 'http://example.com/';
+$garbage_collector = 'http://example.com/wp-cron.php';
 
 /**
  * XML Sitemap Setting
