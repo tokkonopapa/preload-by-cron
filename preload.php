@@ -325,8 +325,8 @@ function get_split( $opt_requests, $total ) {
 	$file = get_option_filename();
 	$updates = get_option( $file );
 
-	$start = $updates['next_preload'];
-	$updates['next_preload'] += intval( $opt_requests );
+	$start = intval( $updates['next_preload'] );
+	$updates['next_preload'] = $start + intval( $opt_requests );
 
 	if( $updates['next_preload'] >= $total )
 		$updates['next_preload'] = 0;
