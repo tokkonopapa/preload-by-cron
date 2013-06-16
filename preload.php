@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.5.0
+ * Version: 0.6.0
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -12,6 +12,7 @@
  *     preload.php?key=your-secret-key&requests=10&interval=100&debug=1
  *
  * @param $_GET['key']: A secret string to execute crawl.
+ * @param $_GET['ping']: Send ping before requesting.
  * @param $_GET['agent']: Additional user agent.
  * @param $_GET['requests']: A number of urls to be requested in parallel.
  * @param $_GET['interval']: Interval in milliseconds between parallel requests.
@@ -104,13 +105,14 @@ $user_agent = array(
 // Default settings
 define( 'CURL_FETCH_REQUESTS',   10 ); // in number
 define( 'CURL_FETCH_INTERVAL',  250 ); // in milliseconds
-define( 'CURL_FETCH_TIMEOUT',    60 ); // in seconds
+define( 'CURL_FETCH_TIMEOUT',    15 ); // in seconds
 define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
 define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
 define( 'REQUESTS_PER_SPLIT',   100 ); // in number
 
 // Options settings
 $options = array(
+	'ping'     => FALSE,
 	'agent'    => '',
 	'requests' => CURL_FETCH_REQUESTS,
 	'interval' => CURL_FETCH_INTERVAL,
@@ -148,6 +150,46 @@ function debug_log( $msg = NULL, $force = FALSE ) {
 }
 
 /**
+ * Ping by fsockopen()
+ *
+ * @param string $host: Host name or IP address.
+ * @param int $port: Port number.
+ * @param int: $timeout: timeout in second.
+ * @see http://www.darian-brown.com/php-ping-script-to-check-remote-server-or-website/
+ */
+function ping( $host, $port = 80, $timeout = 30 ) {
+	$fp = @fsockopen( $host, $port, $errno, $errstr, $timeout );
+	if ( FALSE !== $fp ) {
+		fclose( $fp );
+		return TRUE;
+	} else {
+		debug_log( $errstr, TRUE );
+		return FALSE;
+	}
+}
+
+/**
+ * Parse URL and decompose host information
+ *
+ * @param string $url: <scheme>://<host><:port>/<path>?<query><#fragment>
+ * @return array: host information.
+ */
+function parse_host( $url ) {
+	$url = parse_url( $url ); // PHP 4, PHP 5
+
+	if ( 'localhost' === $url['host'] )
+		$url['host'] = '127.0.0.1';
+
+	if ( 'ssl' === $url['scheme'] )
+		$url['host'] = 'ssl://' . $url['host'];
+
+	if ( empty( $url['port'] ) )
+		$url['port'] = 80;
+
+	return $url;
+}
+
+/**
  * Get contents of specified URL
  *
  * @param mixed $url: URL to be fetched.
@@ -155,17 +197,23 @@ function debug_log( $msg = NULL, $force = FALSE ) {
  * @return string: Strings of Contents.
  */
 function url_get_contents( $url, $timeout = 0 ) {
-/*	$ch = curl_init( $url );
+	$ch = curl_init( $url );
 	curl_setopt_array( $ch, array(
 		CURLOPT_RETURNTRANSFER => TRUE,
+		CURLOPT_FAILONERROR    => TRUE,
+		CURLOPT_FOLLOWLOCATION => TRUE,
+		CURLOPT_MAXREDIRS      => 5,
 		CURLOPT_CONNECTTIMEOUT => $timeout,
+		CURLOPT_TIMEOUT        => $timeout,
+		CURLOPT_HEADER         => FALSE,
 	) );
-	if ( ( $str = curl_exec( $ch ) ) === FALSE ) {
+
+	if ( FALSE === ( $str = curl_exec( $ch ) ) )
 		debug_log( curl_error( $ch ), TRUE );
-	}
+
 	curl_close( $ch );
-	return $str;*/
-	return file_get_contents( $url );
+	return $str;
+//	return file_get_contents( $url );
 }
 
 /**
@@ -188,16 +236,16 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 	foreach ( $url_list as $i => $url ) {
 		$ch_list[$i] = curl_init( $url ); // PHP 4 >= 4.0.2, PHP 5
 		curl_setopt( $ch_list[$i], CURLOPT_RETURNTRANSFER, TRUE );
-//		curl_setopt( $ch_list[$i], CURLOPT_FAILONERROR, TRUE );
+		curl_setopt( $ch_list[$i], CURLOPT_FAILONERROR, TRUE );
 		curl_setopt( $ch_list[$i], CURLOPT_FOLLOWLOCATION, TRUE );
-		curl_setopt( $ch_list[$i], CURLOPT_MAXREDIRS, 3 );
+		curl_setopt( $ch_list[$i], CURLOPT_MAXREDIRS, 5 );
+		curl_setopt( $ch_list[$i], CURLOPT_HEADER, FALSE );
 
 		// No cookies
 		curl_setopt( $ch_list[$i], CURLOPT_COOKIE, '' );
 
 		// Ignore SSL Certification
 		curl_setopt( $ch_list[$i], CURLOPT_SSL_VERIFYPEER, FALSE );
-		curl_setopt( $ch_list[$i], CURLOPT_SSL_VERIFYHOST, FALSE );
 
 		// Set timeout
 		if ( $timeout )
@@ -221,11 +269,11 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 	// Get status of each request
 	$res = 0;
 	foreach ( $url_list as $i => $url ) {
-		// if CURLOPT_FAILONERROR is set to false, curl_error() will return empty.
-		// So curl_getinfo() should be used to get HTTP status code.
-		// if ( empty( ( $err = curl_error( $ch_list[$i] ) ) ) { // PHP 4 >= 4.0.3, PHP 5
-		$err = intval( curl_getinfo( $ch_list[$i], CURLINFO_HTTP_CODE ) ); // PHP 4 >= 4.0.4, PHP 5
-		if ( $err < 400 ) {
+		// CURLOPT_FAILONERROR should be set to true.
+		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
+		if ( empty( $err ) ) {
+//		$err = intval( curl_getinfo( $ch_list[$i], CURLINFO_HTTP_CODE ) ); // PHP 4 >= 4.0.4, PHP 5
+//		if ( $err < 400 ) {
 //			( $options['debug'] and debug_log( curl_multi_getcontent( $ch_list[$i] ) ) );
 			( $options['debug'] and debug_log( $url ) );
 			$res++;
@@ -321,17 +369,18 @@ function update_option( $file, $updates ) {
 /**
  * Get start number to split
  */
-function get_split( $opt_requests, $total ) {
+function get_split( $requests, $total ) {
 	$file = get_option_filename();
 	$updates = get_option( $file );
 
 	$start = intval( $updates['next_preload'] );
-	$updates['next_preload'] = $start + intval( $opt_requests );
+	$updates['next_preload'] = $start + $requests;
 
 	if( $updates['next_preload'] >= $total )
 		$updates['next_preload'] = 0;
 
-	update_option( $file, $updates );
+	if ( $total > 0 )
+		update_option( $file, $updates );
 
 	return $start;
 }
@@ -345,6 +394,13 @@ set_time_limit( $options['limit'] );
 
 // Call garbage collector
 if ( ! empty( $garbage_collector ) ) {
+	// Refresh DNS to prevent 'name lookup timed out'
+	if ( $options['ping'] ) {
+		$url = parse_host( $garbage_collector );
+		ping( $url['host'], $url['port'], $options['timeout'] );
+	}
+
+	// Kick to start cron job
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
 	( $options['debug'] and debug_log( $msg ) ); // ex) <!-- 21 queries. 5.268 seconds. -->
 }
@@ -377,8 +433,8 @@ $urls = array_unique( $urls );
 // Split preloading
 $urls = array_slice(
 	$urls,
-	intval( get_split( $options['split'], count( $urls ) ) ),
-	intval( $options['split'] )
+	get_split( $options['split'], count( $urls ) ),
+	$options['split']
 );
 
 // Additional UA
@@ -405,5 +461,5 @@ foreach ( $user_agent as $ua ) {
 }
 
 // End crawling
-// $time = microtime( TRUE ) - $time;
-// debug_log( sprintf( "%3d pages / %2.3f [sec]", $n, $time ), TRUE );
+$time = microtime( TRUE ) - $time;
+debug_log( sprintf( "%3d pages / %2.3f [sec]", $n, $time ), FALSE );
