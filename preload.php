@@ -199,8 +199,8 @@ function parse_host( $url ) {
 function url_get_contents( $url, $timeout = 0 ) {
 	$ch = curl_init( $url );
 	curl_setopt_array( $ch, array(
-		CURLOPT_RETURNTRANSFER => TRUE,
 		CURLOPT_FAILONERROR    => TRUE,
+		CURLOPT_RETURNTRANSFER => TRUE,
 		CURLOPT_FOLLOWLOCATION => TRUE,
 		CURLOPT_MAXREDIRS      => 5,
 		CURLOPT_CONNECTTIMEOUT => $timeout,
@@ -235,8 +235,8 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 
 	foreach ( $url_list as $i => $url ) {
 		$ch_list[$i] = curl_init( $url ); // PHP 4 >= 4.0.2, PHP 5
-		curl_setopt( $ch_list[$i], CURLOPT_RETURNTRANSFER, TRUE );
 		curl_setopt( $ch_list[$i], CURLOPT_FAILONERROR, TRUE );
+		curl_setopt( $ch_list[$i], CURLOPT_RETURNTRANSFER, TRUE );
 		curl_setopt( $ch_list[$i], CURLOPT_FOLLOWLOCATION, TRUE );
 		curl_setopt( $ch_list[$i], CURLOPT_MAXREDIRS, 5 );
 		curl_setopt( $ch_list[$i], CURLOPT_HEADER, FALSE );
@@ -248,8 +248,10 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		curl_setopt( $ch_list[$i], CURLOPT_SSL_VERIFYPEER, FALSE );
 
 		// Set timeout
-		if ( $timeout )
+		if ( $timeout ) {
+			curl_setopt( $ch_list[$i], CURLOPT_CONNECTTIMEOUT, $timeout );
 			curl_setopt( $ch_list[$i], CURLOPT_TIMEOUT, $timeout );
+		}
 
 		// Set User Agent
 		if ( ! is_null( $ua ) )
