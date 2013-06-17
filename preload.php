@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.6.2
+ * Version: 0.6.3
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -13,14 +13,14 @@
  *
  * @param $_GET['key']: A secret string to execute crawl.
  * @param $_GET['ping']: Send ping before requesting.
+ * @param $_GET['debug']: Output log to a file.
  * @param $_GET['agent']: Additional user agent.
  * @param $_GET['requests']: A number of urls to be requested in parallel.
  * @param $_GET['interval']: Interval in milliseconds between parallel requests.
+ * @param $_GET['split']: A number of requests per preloading.
  * @param $_GET['timeout']: Time out in seconds for each request.
  * @param $_GET['limit']: Time out in seconds for whole preloading.
  * @param $_GET['delay']: Initial delay in seconds for waiting garbage collection.
- * @param $_GET['split']: A number of requests per preloading.
- * @param $_GET['debug']: Output log to a file.
  *
  * @global string $garbage_collector: url to kick off WP-Cron.
  * @global array $sitemap_urls: list of sitemap url.
@@ -103,24 +103,24 @@ $user_agent = array(
 );
 
 // Default settings
-define( 'CURL_FETCH_REQUESTS',   10 ); // in number
-define( 'CURL_FETCH_INTERVAL',  500 ); // in milliseconds
-define( 'CURL_FETCH_TIMEOUT',    15 ); // in seconds
-define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
-define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
+define( 'REQUESTS_IN_PARALLEL',  10 ); // in number
+define( 'INTERVAL_OF_REQUESTS', 500 ); // in milliseconds
 define( 'REQUESTS_PER_SPLIT',   100 ); // in number
+define( 'TIMEOUT_FOR_FETCH',     15 ); // in seconds
+define( 'TIMELIMIT_FOR_EXEC',   600 ); // in seconds
+define( 'TIMEDELAY_FOR_INIT',    10 ); // in seconds
 
 // Options settings
 $options = array(
 	'ping'     => FALSE,
-	'agent'    => '',
-	'requests' => CURL_FETCH_REQUESTS,
-	'interval' => CURL_FETCH_INTERVAL,
-	'timeout'  => CURL_FETCH_TIMEOUT,
-	'limit'    => EXECUTION_TIME_LIMIT,
-	'delay'    => INITIAL_TIME_DELAY,
-	'split'    => REQUESTS_PER_SPLIT,
 	'debug'    => FALSE,
+	'agent'    => '',
+	'requests' => REQUESTS_IN_PARALLEL,
+	'interval' => INTERVAL_OF_REQUESTS,
+	'split'    => REQUESTS_PER_SPLIT,
+	'timeout'  => TIMEOUT_FOR_FETCH,
+	'limit'    => TIMELIMIT_FOR_EXEC,
+	'delay'    => TIMEDELAY_FOR_INIT,
 );
 
 // Parse queries
