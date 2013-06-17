@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.6.0
+ * Version: 0.6.1
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -68,7 +68,7 @@ if ( ! isset( $_GET['key'] ) || $_GET['key'] != 'your-secret-key' ) {
  * @link http://wordpress.org/extend/plugins/wp-cron-control/
  * @example http://example.com/wp-cron.php?doing_wp_cron&secret_string
  */
-$garbage_collector = 'http://example.com/wp-cron.php';
+$garbage_collector = 'http://example.com/wp-cron.php?doing_wp_cron';
 
 /**
  * XML Sitemap Setting
@@ -104,7 +104,7 @@ $user_agent = array(
 
 // Default settings
 define( 'CURL_FETCH_REQUESTS',   10 ); // in number
-define( 'CURL_FETCH_INTERVAL',  250 ); // in milliseconds
+define( 'CURL_FETCH_INTERVAL',  500 ); // in milliseconds
 define( 'CURL_FETCH_TIMEOUT',    15 ); // in seconds
 define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
 define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
@@ -276,11 +276,11 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		if ( empty( $err ) ) {
 //		$err = intval( curl_getinfo( $ch_list[$i], CURLINFO_HTTP_CODE ) ); // PHP 4 >= 4.0.4, PHP 5
 //		if ( $err < 400 ) {
-//			( $options['debug'] and debug_log( curl_multi_getcontent( $ch_list[$i] ) ) );
-			( $options['debug'] and debug_log( $url ) );
+//			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
+			debug_log( $url );
 			$res++;
 		} else {
-			( $options['debug'] and debug_log( "$err at $url" ) );
+			debug_log( "$err at $url" );
 			throw new RuntimeException( "$err at $url" ); // PHP 5 >= 5.1.0
 		}
 
@@ -404,7 +404,7 @@ if ( ! empty( $garbage_collector ) ) {
 
 	// Kick to start cron job
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
-	( $options['debug'] and debug_log( $msg ) ); // ex) <!-- 21 queries. 5.268 seconds. -->
+	debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
 }
 
 // Wait to finish garbage collection
@@ -454,7 +454,7 @@ foreach ( $user_agent as $ua ) {
 				$options['timeout'],
 				$ua
 			);
-			( $options['debug'] and debug_log( $n ) );
+			debug_log( $n );
 		} catch ( Exception $e ) {
 			debug_log( $e->getMessage(), TRUE );
 		}
