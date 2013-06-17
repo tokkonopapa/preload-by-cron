@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.6.1
+ * Version: 0.6.2
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -274,8 +274,6 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		// CURLOPT_FAILONERROR should be set to true.
 		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
 		if ( empty( $err ) ) {
-//		$err = intval( curl_getinfo( $ch_list[$i], CURLINFO_HTTP_CODE ) ); // PHP 4 >= 4.0.4, PHP 5
-//		if ( $err < 400 ) {
 //			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
 			debug_log( $url );
 			$res++;
@@ -396,7 +394,7 @@ set_time_limit( $options['limit'] );
 
 // Call garbage collector
 if ( ! empty( $garbage_collector ) ) {
-	// Refresh DNS to prevent 'name lookup timed out'
+	// Reload DNS to prevent 'name lookup timed out'
 	if ( $options['ping'] ) {
 		$url = parse_host( $garbage_collector );
 		ping( $url['host'], $url['port'], $options['timeout'] );
