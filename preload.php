@@ -103,21 +103,21 @@ $user_agent = array(
 );
 
 // Default settings
-define( 'REQUESTS_IN_PARALLEL',  10 ); // in number
-define( 'INTERVAL_OF_REQUESTS', 500 ); // in milliseconds
-define( 'REQUESTS_PER_SPLIT',   100 ); // in number
-define( 'TIMEOUT_FOR_FETCH',     15 ); // in seconds
-define( 'TIMELIMIT_FOR_EXEC',   600 ); // in seconds
-define( 'TIMEDELAY_FOR_INIT',    10 ); // in seconds
+define( 'FETCHES_IN_PARALLEL',  10 ); // in number
+define( 'INTERVAL_OF_FETCHES', 500 ); // in milliseconds
+define( 'REQUESTS_EACH_SPLIT', 100 ); // in number
+define( 'TIMEOUT_FOR_FETCH',    15 ); // in seconds
+define( 'TIMELIMIT_FOR_EXEC',  600 ); // in seconds
+define( 'TIMEDELAY_FOR_INIT',   10 ); // in seconds
 
 // Options settings
 $options = array(
 	'ping'     => FALSE,
 	'debug'    => FALSE,
 	'agent'    => '',
-	'requests' => REQUESTS_IN_PARALLEL,
-	'interval' => INTERVAL_OF_REQUESTS,
-	'split'    => REQUESTS_PER_SPLIT,
+	'requests' => FETCHES_IN_PARALLEL,
+	'interval' => INTERVAL_OF_FETCHES,
+	'split'    => REQUESTS_EACH_SPLIT,
 	'timeout'  => TIMEOUT_FOR_FETCH,
 	'limit'    => TIMELIMIT_FOR_EXEC,
 	'delay'    => TIMEDELAY_FOR_INIT,
