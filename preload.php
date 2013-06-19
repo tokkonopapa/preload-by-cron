@@ -106,8 +106,8 @@ $user_agent = array(
 define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
 define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
 define( 'TIMEOUT_OF_REQUEST',    15 ); // in seconds
-define( 'REQUESTS_PER_SPLIT',    45 ); // in number
-define( 'REQUESTS_IN_PARALLEL',   5 ); // in number
+define( 'REQUESTS_PER_SPLIT',   100 ); // in number
+define( 'REQUESTS_IN_PARALLEL',  10 ); // in number
 define( 'INTERVAL_OF_REQUESTS', 500 ); // in milliseconds
 
 // Options settings
