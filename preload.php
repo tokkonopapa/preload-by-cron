@@ -17,9 +17,9 @@
  * @param $_GET['agent']: Additional user agent.
  * @param $_GET['limit']: Timeout in seconds to finish this command.
  * @param $_GET['delay']: Initial delay in seconds to wait garbage collection.
- * @param $_GET['timeout']: Timeout in seconds for each request.
  * @param $_GET['split']: A number of requests per split preloading.
- * @param $_GET['requests']: A number of urls to be requested in parallel.
+ * @param $_GET['fetches']: A number of urls to be fetched in parallel.
+ * @param $_GET['timeout']: Timeout in seconds for each request.
  * @param $_GET['interval']: Interval in milliseconds between parallel requests.
  *
  * @global string $garbage_collector: url to kick off WP-Cron.
@@ -105,10 +105,10 @@ $user_agent = array(
 // Default settings
 define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
 define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
-define( 'TIMEOUT_OF_REQUEST',    15 ); // in seconds
 define( 'REQUESTS_PER_SPLIT',   100 ); // in number
-define( 'REQUESTS_IN_PARALLEL',  10 ); // in number
-define( 'INTERVAL_OF_REQUESTS', 500 ); // in milliseconds
+define( 'FETCHES_IN_PARALLEL',   10 ); // in number
+define( 'TIMEOUT_OF_FETCH',      15 ); // in seconds
+define( 'INTERVAL_OF_FETCHES',  500 ); // in milliseconds
 
 // Options settings
 $options = array(
@@ -117,10 +117,10 @@ $options = array(
 	'agent'    => '',
 	'limit'    => EXECUTION_TIME_LIMIT,
 	'delay'    => INITIAL_TIME_DELAY,
-	'timeout'  => TIMEOUT_OF_REQUEST,
 	'split'    => REQUESTS_PER_SPLIT,
-	'requests' => REQUESTS_IN_PARALLEL,
-	'interval' => INTERVAL_OF_REQUESTS,
+	'fetches'  => FETCHES_IN_PARALLEL,
+	'timeout'  => TIMEOUT_OF_FETCH,
+	'interval' => INTERVAL_OF_FETCHES,
 );
 
 // Parse queries
@@ -448,7 +448,7 @@ foreach ( $user_agent as $ua ) {
 	while ( count( $pages ) ) {
 		try {
 			$n += fetch_multi_urls(
-				array_splice( $pages, 0, $options['requests'] ),
+				array_splice( $pages, 0, $options['fetches'] ),
 				$options['timeout'],
 				$ua
 			);
