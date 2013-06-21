@@ -140,6 +140,7 @@ foreach ( $options as $key => $value ) {
  * @param string $msg: message strings.
  */
 function debug_log( $msg = NULL ) {
+	global $options;
 	if ( $options['debug'] ) {
 		$msg = trim( $msg );
 		$file = basename( __FILE__, '.php' ) . '.log';
@@ -444,7 +445,7 @@ if ( ! empty( $options['agent'] ) )
 // Fetch URLs
 $n = 0;
 foreach ( $user_agent as $ua ) {
-	$t = $tsum = 0;
+	$t = $treq = 0;
 	$pages = $urls;
 	while ( count( $pages ) ) {
 		try {
@@ -454,7 +455,7 @@ foreach ( $user_agent as $ua ) {
 				$options['timeout'],
 				$ua
 			);
-			$tsum += microtime( TRUE ) - $t;
+			$treq += microtime( TRUE ) - $t;
 			// debug_log( $n );
 		} catch ( Exception $e ) {
 			debug_log( $e->getMessage() );
@@ -466,6 +467,6 @@ foreach ( $user_agent as $ua ) {
 // End crawling
 if ( $options['debug'] ) {
 	$time = microtime( TRUE ) - $time;
-	$tsum = $tsum ? $n / $tsum : 0;
-	debug_log( sprintf( "%3d pages | %2.3f sec | %4.2f req/sec", $n, $time, $tsum ) );
+	$treq = $treq ? $n / $treq : 0;
+	debug_log( sprintf( "%3d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ) );
 }
