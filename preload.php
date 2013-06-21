@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.6.3
+ * Version: 0.7.0
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -139,8 +139,8 @@ foreach ( $options as $key => $value ) {
  *
  * @param string $msg: message strings.
  */
-function debug_log( $msg = NULL, $force = FALSE ) {
-	if ( $options['debug'] || $force ) {
+function debug_log( $msg = NULL ) {
+	if ( $options['debug'] ) {
 		$msg = trim( $msg );
 		$file = basename( __FILE__, '.php' ) . '.log';
 		$fp = @fopen( $file, is_null( $msg ) ? 'w' : 'a' );
@@ -163,7 +163,7 @@ function ping( $host, $port = 80, $timeout = 30 ) {
 		fclose( $fp );
 		return TRUE;
 	} else {
-		debug_log( $errstr, TRUE );
+		debug_log( $errstr );
 		return FALSE;
 	}
 }
@@ -209,7 +209,7 @@ function url_get_contents( $url, $timeout = 0 ) {
 	) );
 
 	if ( FALSE === ( $str = curl_exec( $ch ) ) )
-		debug_log( curl_error( $ch ), TRUE );
+		debug_log( curl_error( $ch ) );
 
 	curl_close( $ch );
 	return $str;
@@ -275,10 +275,10 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
 		if ( empty( $err ) ) {
 //			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
-			debug_log( $url );
+//			debug_log( $url );
 			$res++;
 		} else {
-			debug_log( "$err at $url" );
+//			debug_log( "$err at $url" );
 			throw new RuntimeException( "$err at $url" ); // PHP 5 >= 5.1.0
 		}
 
@@ -390,7 +390,7 @@ ignore_user_abort( TRUE );
 set_time_limit( $options['limit'] );
 
 // Initialize debug
-// debug_log( NULL, TRUE );
+// debug_log( NULL );
 
 // Call garbage collector
 if ( ! empty( $garbage_collector ) ) {
@@ -402,7 +402,7 @@ if ( ! empty( $garbage_collector ) ) {
 
 	// Kick to start cron job
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
-	debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
+	// debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
 }
 
 // Wait to finish garbage collection
@@ -444,22 +444,28 @@ if ( ! empty( $options['agent'] ) )
 // Fetch URLs
 $n = 0;
 foreach ( $user_agent as $ua ) {
+	$t = $tsum = 0;
 	$pages = $urls;
 	while ( count( $pages ) ) {
 		try {
+			$t = microtime( TRUE );
 			$n += fetch_multi_urls(
 				array_splice( $pages, 0, $options['fetches'] ),
 				$options['timeout'],
 				$ua
 			);
-			debug_log( $n );
+			$tsum += microtime( TRUE ) - $t;
+			// debug_log( $n );
 		} catch ( Exception $e ) {
-			debug_log( $e->getMessage(), TRUE );
+			debug_log( $e->getMessage() );
 		}
 		usleep( $options['interval'] );
 	}
 }
 
 // End crawling
-$time = microtime( TRUE ) - $time;
-debug_log( sprintf( "%3d pages / %2.3f [sec]", $n, $time ), FALSE );
+if ( $options['debug'] ) {
+	$time = microtime( TRUE ) - $time;
+	$tsum = $tsum ? $n / $tsum : 0;
+	debug_log( sprintf( "%3d pages | %2.3f sec | %4.2f req/sec", $n, $time, $tsum ) );
+}
