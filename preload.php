@@ -153,15 +153,13 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 	if ( $options['debug'] >= $level ) {
 		$buf = array();
 		$fp = @fopen( basename( __FILE__, '.php' ) . '.log', 'c+' );
-		while ( $fp && ! feof( $fp ) ) {
-			if ( FALSE !== ( $line = fgets( $fp ) ) ) {
-				$buf[] = $line;
-			}
+		while ( FALSE !== ( $line = fgets( $fp ) ) ) {
+			$buf[] = $line;
 		}
 		$buf[] = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
-		if ( count( $buf ) > DEBUG_LEN )
-			$buf = array_slice( $buf, -DEBUG_LEN );
+		$buf = array_slice( $buf, -DEBUG_LEN );
 		@ftruncate( $fp, 0 );
+		@rewind( $fp );
 		foreach ( $buf as $val ) {
 			@fwrite( $fp, $val );
 		}
@@ -380,6 +378,7 @@ function update_option( $file, $updates ) {
 	if ( flock( $fp, LOCK_EX ) ) {
 		$data = fread( $fp, length );
 		ftruncate( $fp, 0 );
+		rewind( $fp );
 
 		fwrite( $fp, "<?php \$preload_options = array(\n" );
 		foreach ( $updates as $key => $val ) {
