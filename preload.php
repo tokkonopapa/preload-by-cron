@@ -275,14 +275,14 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 	// @link http://www.php.net/manual/function.curl-multi-exec.php
 	$active = NULL;
 	do {
-		$mrc = curl_multi_exec( $mh, $active ); // PHP 5
-	} while ( CURLM_CALL_MULTI_PERFORM === $mrc );
+		$res = curl_multi_exec( $mh, $active ); // PHP 5
+	} while ( CURLM_CALL_MULTI_PERFORM === $res );
 
-	while ( $active && CURLM_OK === $mrc ) {
+	while ( $active && CURLM_OK === $res ) {
 		if ( curl_multi_select( $mh ) !== -1 ) { // PHP 5
 			do {
-				$mrc = curl_multi_exec( $mh, $active );
-			} while ( CURLM_CALL_MULTI_PERFORM === $mrc ); 
+				$res = curl_multi_exec( $mh, $active );
+			} while ( CURLM_CALL_MULTI_PERFORM === $res );
 		}
 	}
 
