@@ -62,6 +62,8 @@ then you should reset the period of garbage collection to `(X - Y)` seconds.
 - [x] handle errors and exceptions.
 - [x] additional crawl with smart phone UA.
 - [x] loosely synchronize with cache garbage collection via WP-Cron Control.
+- [ ] add options parser for command line. (0.9)
+- [ ] make a ring buffer for debug log. (0.9)
 
 ### Similar plugins:
 - [AskApache Crazy Cache][ACC]

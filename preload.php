@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.8.2
+ * Version: 0.9.0
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -116,6 +116,7 @@ define( 'INTERVAL_OF_FETCHES',  500 ); // in milliseconds
 define( 'DEBUG_NON', 0 );
 define( 'DEBUG_ERR', 1 );
 define( 'DEBUG_LOG', 2 );
+define( 'DEBUG_LEN', 6 * 24 ); // Ring buffer length
 
 // Options settings
 $options = array(
@@ -147,13 +148,20 @@ foreach ( $options as $key => $value ) {
  *
  * @param string $msg: message strings.
  */
-function debug_log( $msg = NULL, $level = DEBUG_LOG ) {
+function debug_log( $msg, $level = DEBUG_LOG ) {
 	global $options;
 	if ( $options['debug'] >= $level ) {
-		$msg = trim( $msg );
-		$file = basename( __FILE__, '.php' ) . '.log';
-		$fp = @fopen( $file, is_null( $msg ) ? 'w' : 'a' );
-		@fwrite( $fp, date( "Y/m/d,D,H:i:s" ) . " ${msg}\n" );
+		$buf = array();
+		$fp = @fopen( basename( __FILE__, '.php' ) . '.log', 'c+' );
+		while ( FALSE !== ( $line = fgets( $fp ) ) ) {
+			$buf[] = $line;
+		}
+		$buf[] = date( "Y/m/d,D,H:i:s" ) . trim( $msg ) . "\n";
+		$buf = array_slice( $buf, -DEBUG_LEN, DEBUG_LEN );
+		@ftruncate( $fp, 0 );
+		foreach ( $buf as $val ) {
+			@fwrite( $fp, $val );
+		}
 		@fclose( $fp );
 	}
 }
@@ -406,9 +414,6 @@ function get_split( $requests, $total ) {
 // Ignore client aborts and disallow the script to run forever
 ignore_user_abort( TRUE );
 set_time_limit( $options['limit'] );
-
-// Initialize debug
-// debug_log( NULL );
 
 // Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
