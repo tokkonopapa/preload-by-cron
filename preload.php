@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.8.0
+ * Version: 0.8.1
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -111,11 +111,16 @@ define( 'FETCHES_IN_PARALLEL',   10 ); // in number
 define( 'TIMEOUT_OF_FETCH',      15 ); // in seconds
 define( 'INTERVAL_OF_FETCHES',  500 ); // in milliseconds
 
+// Level of debug log
+define( 'DEBUG_NON', 0 );
+define( 'DEBUG_ERR', 1 );
+define( 'DEBUG_LOG', 2 );
+
 // Options settings
 $options = array(
 	'ping'     => FALSE,
 	'test'     => FALSE,
-	'debug'    => FALSE,
+	'debug'    => DEBUG_NON,
 	'agent'    => array(),
 	'limit'    => EXECUTION_TIME_LIMIT,
 	'delay'    => INITIAL_TIME_DELAY,
@@ -141,9 +146,9 @@ foreach ( $options as $key => $value ) {
  *
  * @param string $msg: message strings.
  */
-function debug_log( $msg = NULL ) {
+function debug_log( $msg = NULL, $level = DEBUG_LOG ) {
 	global $options;
-	if ( $options['debug'] ) {
+	if ( $options['debug'] >= $level ) {
 		$msg = trim( $msg );
 		$file = basename( __FILE__, '.php' ) . '.log';
 		$fp = @fopen( $file, is_null( $msg ) ? 'w' : 'a' );
@@ -166,7 +171,7 @@ function ping( $host, $port = 80, $timeout = 30 ) {
 		fclose( $fp );
 		return TRUE;
 	} else {
-		debug_log( $errstr );
+		debug_log( $errstr, DEBUG_ERR );
 		return FALSE;
 	}
 }
@@ -212,7 +217,7 @@ function url_get_contents( $url, $timeout = 0 ) {
 	) );
 
 	if ( FALSE === ( $str = curl_exec( $ch ) ) )
-		debug_log( curl_error( $ch ) );
+		debug_log( curl_error( $ch ), DEBUG_ERR );
 
 	curl_close( $ch );
 	return $str;
@@ -278,10 +283,10 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
 		if ( empty( $err ) ) {
 //			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
-//			debug_log( $url );
+			debug_log( $url );
 			$res++;
 		} else {
-//			debug_log( "$err at $url" );
+			debug_log( "$err at $url" );
 			throw new RuntimeException( "$err at $url" ); // PHP 5 >= 5.1.0
 		}
 
@@ -399,7 +404,7 @@ set_time_limit( $options['limit'] );
 // Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
-	// debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
+	debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
 }
 
 // Wait to finish garbage collection
@@ -460,9 +465,9 @@ foreach ( $user_agent as $ua ) {
 				$ua
 			);
 			$treq += microtime( TRUE ) - $t;
-			// debug_log( $n );
+			debug_log( $n );
 		} catch ( Exception $e ) {
-			debug_log( $e->getMessage() );
+			debug_log( $e->getMessage(), DEBUG_ERR );
 		}
 
 		// Take a break
@@ -474,5 +479,5 @@ foreach ( $user_agent as $ua ) {
 if ( $options['debug'] ) {
 	$time = microtime( TRUE ) - $time;
 	$treq = $treq ? $n / $treq : 0;
-	debug_log( sprintf( "%3d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ) );
+	debug_log( sprintf( "%3d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ), DEBUG_LOG );
 }
