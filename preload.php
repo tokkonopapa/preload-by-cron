@@ -3,26 +3,27 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.8.1
+ * Version: 0.8.2
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
  *
  * @example:
- *     preload.php?key=your-secret-key&requests=10&interval=100&debug=1
+ *     wget -q "http://example.com/preload.php?key=your-secret-key&requests=10&interval=100&debug=1"
  *
  * @param $_GET['key']: A secret string to execute crawl.
- * @param $_GET['ping']: Send ping before requesting.
+ * @param $_GET['ping']: Send ping before fetching.
  * @param $_GET['test']: Just test, do not update the next split.
- * @param $_GET['debug']: Output log to a file.
- * @param $_GET['agent']: Additional user agent.
- * @param $_GET['limit']: Timeout in seconds to finish this command.
+ * @param $_GET['debug']: A level to output to debug log file.
+ * @param $_GET['agent']: Additional user agent strings.
+ * @param $_GET['limit']: Maximum execution time in seconds.
  * @param $_GET['delay']: Initial delay in seconds to wait garbage collection.
  * @param $_GET['split']: A number of requests per split preloading.
  * @param $_GET['fetches']: A number of urls to be fetched in parallel.
- * @param $_GET['timeout']: Timeout in seconds for each request.
- * @param $_GET['interval']: Interval in milliseconds between parallel requests.
+ * @param $_GET['timeout']: Timeout in seconds for each fetch.
+ * @param $_GET['interval']: Interval in milliseconds between parallel fetches.
  *
+ * @global string your-secret-key: A secret key.
  * @global string $garbage_collector: url to kick off WP-Cron.
  * @global array $sitemap_urls: list of sitemap url.
  * @global array $additional_urls: list of additional url.
