@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.7.1
+ * Version: 0.8.0
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -396,15 +396,8 @@ set_time_limit( $options['limit'] );
 // Initialize debug
 // debug_log( NULL );
 
-// Call garbage collector
+// Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
-	// Reload DNS to prevent 'name lookup timed out'
-	if ( $options['ping'] ) {
-		$url = parse_host( $garbage_collector );
-		ping( $url['host'], $url['port'], $options['timeout'] );
-	}
-
-	// Kick to start cron job
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
 	// debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
 }
@@ -445,12 +438,20 @@ $urls = array_slice(
 if ( ! empty( $options['agent'] ) )
 	$user_agent = array_merge( $user_agent, (array)$options['agent'] );
 
+// Set the url for ping
+if ( $options['ping'] )
+	$ping = parse_host( $garbage_collector );
+
 // Fetch URLs
 $n = 0;
 foreach ( $user_agent as $ua ) {
 	$t = $treq = 0;
 	$pages = $urls;
 	while ( count( $pages ) ) {
+		// Reload DNS to reduce 'name lookup timed out'
+		( isset( $ping ) and ping( $ping['host'], $ping['port'], $options['timeout'] ) );
+
+		// Fetch pages
 		try {
 			$t = microtime( TRUE );
 			$n += fetch_multi_urls(
@@ -463,11 +464,13 @@ foreach ( $user_agent as $ua ) {
 		} catch ( Exception $e ) {
 			debug_log( $e->getMessage() );
 		}
+
+		// Take a break
 		usleep( $options['interval'] );
 	}
 }
 
-// End crawling
+// End of crawling
 if ( $options['debug'] ) {
 	$time = microtime( TRUE ) - $time;
 	$treq = $treq ? $n / $treq : 0;
