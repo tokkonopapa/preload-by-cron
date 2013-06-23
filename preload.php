@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.7.0
+ * Version: 0.7.1
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -13,6 +13,7 @@
  *
  * @param $_GET['key']: A secret string to execute crawl.
  * @param $_GET['ping']: Send ping before requesting.
+ * @param $_GET['test']: Just test, do not update the next split.
  * @param $_GET['debug']: Output log to a file.
  * @param $_GET['agent']: Additional user agent.
  * @param $_GET['limit']: Timeout in seconds to finish this command.
@@ -99,7 +100,7 @@ $additional_urls = array(
  * @global array $user_agent: list of user agent strings.
  */
 $user_agent = array(
-	'Super Preloading By Cron',
+	'Mozilla/5.0 (Super Preloading By Cron)',
 );
 
 // Default settings
@@ -113,6 +114,7 @@ define( 'INTERVAL_OF_FETCHES',  500 ); // in milliseconds
 // Options settings
 $options = array(
 	'ping'     => FALSE,
+	'test'     => FALSE,
 	'debug'    => FALSE,
 	'agent'    => '',
 	'limit'    => EXECUTION_TIME_LIMIT,
@@ -380,7 +382,8 @@ function get_split( $requests, $total ) {
 	if( $updates['next_preload'] >= $total )
 		$updates['next_preload'] = 0;
 
-	if ( $total > 0 )
+	global $options;
+	if ( ! $options['test'] && $total > 0 )
 		update_option( $file, $updates );
 
 	return $start;
