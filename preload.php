@@ -153,11 +153,13 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 	if ( $options['debug'] >= $level ) {
 		$buf = array();
 		$fp = @fopen( basename( __FILE__, '.php' ) . '.log', 'c+' );
-		while ( FALSE !== ( $line = fgets( $fp ) ) ) {
-			$buf[] = $line;
+		while ( $fp && ! feof( $fp ) ) {
+			if ( FALSE !== ( $line = fgets( $fp ) ) ) {
+				$buf[] = $line;
+			}
 		}
-		$buf[] = date( "Y/m/d,D,H:i:s" ) . trim( $msg ) . "\n";
-		$buf = array_slice( $buf, -DEBUG_LEN, DEBUG_LEN );
+		$buf[] = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
+		$buf = array_slice( $buf, -DEBUG_LEN );
 		@ftruncate( $fp, 0 );
 		foreach ( $buf as $val ) {
 			@fwrite( $fp, $val );
