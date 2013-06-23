@@ -159,7 +159,8 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 			}
 		}
 		$buf[] = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
-		$buf = array_slice( $buf, -DEBUG_LEN );
+		if ( count( $buf ) > DEBUG_LEN )
+			$buf = array_slice( $buf, -DEBUG_LEN );
 		@ftruncate( $fp, 0 );
 		foreach ( $buf as $val ) {
 			@fwrite( $fp, $val );
