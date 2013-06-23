@@ -164,6 +164,7 @@ function debug_log( $msg = NULL, $level = DEBUG_LOG ) {
  * @param int $port: Port number.
  * @param int: $timeout: timeout in second.
  * @see http://www.darian-brown.com/php-ping-script-to-check-remote-server-or-website/
+ * @link http://jp2.php.net/manual/ja/ref.network.php
  */
 function ping( $host, $port = 80, $timeout = 30 ) {
 	$fp = @fsockopen( $host, $port, $errno, $errstr, $timeout );
@@ -271,10 +272,18 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 	// Run the sub-connections of the current cURL handle
 	// @link http://www.php.net/manual/function.curl-multi-init.php
 	// @link http://www.php.net/manual/function.curl-multi-exec.php
-	$running = NULL;
+	$active = NULL;
 	do {
-		curl_multi_exec( $mh, $running ); // PHP 5
-	} while ( $running );
+		$mrc = curl_multi_exec( $mh, $active ); // PHP 5
+	} while ( CURLM_CALL_MULTI_PERFORM === $mrc );
+
+	while ( $active && CURLM_OK === $mrc ) {
+		if ( curl_multi_select( $mh ) !== -1 ) { // PHP 5
+			do {
+				$mrc = curl_multi_exec( $mh, $active );
+			} while ( CURLM_CALL_MULTI_PERFORM === $mrc ); 
+		}
+	}
 
 	// Get status of each request
 	$res = 0;
@@ -282,12 +291,11 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 		// CURLOPT_FAILONERROR should be set to true.
 		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
 		if ( empty( $err ) ) {
-//			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
-			debug_log( $url );
 			$res++;
+			debug_log( $url );
+//			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
 		} else {
-			debug_log( "$err at $url" );
-			throw new RuntimeException( "$err at $url" ); // PHP 5 >= 5.1.0
+			debug_log( "$err at $url", DEBUG_ERR );
 		}
 
 		curl_multi_remove_handle( $mh, $ch_list[$i] ); // PHP 5
@@ -454,21 +462,17 @@ foreach ( $user_agent as $ua ) {
 	$pages = $urls;
 	while ( count( $pages ) ) {
 		// Reload DNS to reduce 'name lookup timed out'
-		( isset( $ping ) and ping( $ping['host'], $ping['port'], $options['timeout'] ) );
+		if ( $options['ping'] )
+			ping( $ping['host'], $ping['port'], $options['timeout'] );
 
 		// Fetch pages
-		try {
-			$t = microtime( TRUE );
-			$n += fetch_multi_urls(
-				array_splice( $pages, 0, $options['fetches'] ),
-				$options['timeout'],
-				$ua
-			);
-			$treq += microtime( TRUE ) - $t;
-			debug_log( $n );
-		} catch ( Exception $e ) {
-			debug_log( $e->getMessage(), DEBUG_ERR );
-		}
+		$t = microtime( TRUE );
+		$n += fetch_multi_urls(
+			array_splice( $pages, 0, $options['fetches'] ),
+			$options['timeout'],
+			$ua
+		);
+		$treq += microtime( TRUE ) - $t;
 
 		// Take a break
 		usleep( $options['interval'] );
