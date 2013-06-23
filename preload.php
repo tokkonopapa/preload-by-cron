@@ -116,7 +116,7 @@ $options = array(
 	'ping'     => FALSE,
 	'test'     => FALSE,
 	'debug'    => FALSE,
-	'agent'    => '',
+	'agent'    => array(),
 	'limit'    => EXECUTION_TIME_LIMIT,
 	'delay'    => INITIAL_TIME_DELAY,
 	'split'    => REQUESTS_PER_SPLIT,
@@ -443,7 +443,7 @@ $urls = array_slice(
 
 // Additional UA
 if ( ! empty( $options['agent'] ) )
-	$user_agent[] = $options['agent'];
+	$user_agent = array_merge( $user_agent, (array)$options['agent'] );
 
 // Fetch URLs
 $n = 0;
