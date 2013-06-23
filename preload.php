@@ -158,8 +158,8 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 		}
 		$buf[] = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
 		$buf = array_slice( $buf, -DEBUG_LEN );
-		@ftruncate( $fp, 0 );
 		@rewind( $fp );
+		@ftruncate( $fp, 0 );
 		foreach ( $buf as $val ) {
 			@fwrite( $fp, $val );
 		}
@@ -377,8 +377,8 @@ function update_option( $file, $updates ) {
 	// @link http://php.net/manual/function.flock.php
 	if ( flock( $fp, LOCK_EX ) ) {
 		$data = fread( $fp, length );
-		ftruncate( $fp, 0 );
 		rewind( $fp );
+		ftruncate( $fp, 0 );
 
 		fwrite( $fp, "<?php \$preload_options = array(\n" );
 		foreach ( $updates as $key => $val ) {
