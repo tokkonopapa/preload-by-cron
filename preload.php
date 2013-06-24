@@ -153,7 +153,7 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 	if ( $options['debug'] >= $level ) {
 		$file = basename( __FILE__, '.php' ) . '.log';
 		$fp = @fopen( $file, 'c+' );
-		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
+		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg );
 		$buf = explode( "\n", fread( $fp, filesize( $file ) ) . $msg );
 		$buf = array_slice( $buf, -DEBUG_LEN );
 		@rewind( $fp );
