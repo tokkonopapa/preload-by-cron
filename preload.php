@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.9.0
+ * Version: 0.9.1
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -151,16 +151,14 @@ foreach ( $options as $key => $value ) {
 function debug_log( $msg, $level = DEBUG_LOG ) {
 	global $options;
 	if ( $options['debug'] >= $level ) {
-		$buf = array();
-		$fp = @fopen( basename( __FILE__, '.php' ) . '.log', 'c+' );
-		while ( FALSE !== ( $line = fgets( $fp ) ) ) {
-			$buf[] = $line;
-		}
-		$buf[] = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
+		$file = basename( __FILE__, '.php' ) . '.log';
+		$fp = @fopen( $file, 'c+' );
+		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg ) . "\n";
+		$buf = explode( "\n", fread( $fp, filesize( $file ) ) . $msg );
 		$buf = array_slice( $buf, -DEBUG_LEN );
 		@rewind( $fp );
 		@ftruncate( $fp, 0 );
-		@fwrite( $fp, implode( $buf ) );
+		@fwrite( $fp, implode( "\n", $buf ) );
 		@fclose( $fp );
 	}
 }
