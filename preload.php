@@ -160,9 +160,7 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 		$buf = array_slice( $buf, -DEBUG_LEN );
 		@rewind( $fp );
 		@ftruncate( $fp, 0 );
-		foreach ( $buf as $val ) {
-			@fwrite( $fp, $val );
-		}
+		@fwrite( $fp, implode( $buf ) );
 		@fclose( $fp );
 	}
 }
