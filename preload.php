@@ -3,22 +3,22 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.9.1
+ * Version: 0.9.2
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
  *
  * @example:
- *     wget -q "http://example.com/preload.php?key=your-secret-key&requests=10&interval=100&debug=1"
+ *     wget -q "http://example.com/preload.php?key=your-secret-key&fetches=10&interval=100&debug=1"
  *
  * @param $_GET['key']: A secret string to execute crawl.
  * @param $_GET['ping']: Send ping before fetching.
  * @param $_GET['test']: Just test, do not update the next split.
  * @param $_GET['debug']: A level to output to debug log file.
  * @param $_GET['agent']: Additional user agent strings.
- * @param $_GET['limit']: Maximum execution time in seconds.
- * @param $_GET['delay']: Initial delay in seconds to wait garbage collection.
- * @param $_GET['split']: A number of requests per split preloading.
+ * @param $_GET['cache']: Cache duration in seconds.
+ * @param $_GET['gc']: Interval of garbage collection in seconds.
+ * @param $_GET['wait']: Wait in seconds for garbage collection.
  * @param $_GET['fetches']: A number of urls to be fetched in parallel.
  * @param $_GET['timeout']: Timeout in seconds for each fetch.
  * @param $_GET['interval']: Interval in milliseconds between parallel fetches.
@@ -64,11 +64,11 @@ if ( ! isset( $_GET['key'] ) || $_GET['key'] != 'your-secret-key' ) {
  *
  * Garbage collection will be scheduled with WP-Cron functions.
  * To synchronize preloading with garbage collection, you should simply 
- * fetch your WordPress top page, or use WP-Cron Control plugin.
+ * fetch WordPress wp-cron.php, or use WP-Cron Control plugin.
  *
  * @global string $garbage_collector: url for WP-Cron.
  * @link http://wordpress.org/extend/plugins/wp-cron-control/
- * @example http://example.com/wp-cron.php?doing_wp_cron&secret_string
+ * @example http://example.com/wp-cron.php?doing_wp_cron&your-secret-key
  */
 $garbage_collector = 'http://example.com/wp-cron.php?doing_wp_cron';
 
@@ -105,12 +105,12 @@ $user_agent = array(
 );
 
 // Default settings
-define( 'EXECUTION_TIME_LIMIT', 600 ); // in seconds
-define( 'INITIAL_TIME_DELAY',    10 ); // in seconds
-define( 'REQUESTS_PER_SPLIT',   100 ); // in number
+define( 'CACHE_DURATION'       3600 ); // in seconds
+define( 'GARBAGE_COLLECTION',   600 ); // in seconds
+define( 'WAIT_FOR_GC_WPCRON',    10 ); // in seconds
 define( 'FETCHES_IN_PARALLEL',   10 ); // in number
 define( 'TIMEOUT_OF_FETCH',      15 ); // in seconds
-define( 'INTERVAL_OF_FETCHES',  500 ); // in milliseconds
+define( 'INTERVAL_OF_FETCHES',  250 ); // in milliseconds
 
 // Level of debug log
 define( 'DEBUG_NON', 0 );
@@ -124,20 +124,20 @@ $options = array(
 	'test'     => FALSE,
 	'debug'    => DEBUG_NON,
 	'agent'    => array(),
-	'limit'    => EXECUTION_TIME_LIMIT,
-	'delay'    => INITIAL_TIME_DELAY,
-	'split'    => REQUESTS_PER_SPLIT,
+	'cache'    => CACHE_DURATION,
+	'gc'       => GARBAGE_COLLECTION,
+	'wait'     => WAIT_FOR_GC_WPCRON,
 	'fetches'  => FETCHES_IN_PARALLEL,
 	'timeout'  => TIMEOUT_OF_FETCH,
 	'interval' => INTERVAL_OF_FETCHES,
 );
 
-// Parse queries
+// Parse and check queries
 foreach ( $options as $key => $value ) {
 	if ( isset( $_GET[ $key ] ) ) {
 		if ( is_string( $options[ $key ] ) ) {
 			$options[ $key ] = strip_tags( $_GET[ $key ] );
-		} else if ( is_numeric( $_GET[ $key ] ) ) {
+		} else if ( is_numeric( $_GET[ $key ] ) && 0 < (int)$_GET[ $key ] ) {
 			$options[ $key ] = intval( $_GET[ $key ] );
 		}
 	}
@@ -151,14 +151,14 @@ foreach ( $options as $key => $value ) {
 function debug_log( $msg, $level = DEBUG_LOG ) {
 	global $options;
 	if ( $options['debug'] >= $level ) {
+		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg );
 		$file = basename( __FILE__, '.php' ) . '.log';
 		$fp = @fopen( $file, 'c+' );
-		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg );
 		$buf = explode( "\n", fread( $fp, filesize( $file ) ) . $msg );
 		$buf = array_slice( $buf, -DEBUG_LEN );
 		@rewind( $fp );
 		@ftruncate( $fp, 0 );
-		@fwrite( $fp, implode( "\n", $buf ) );
+		@fwrite( $fp, implode( "\n", $buf ) . "\n" );
 		@fclose( $fp );
 	}
 }
@@ -172,13 +172,13 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
  * @see http://www.darian-brown.com/php-ping-script-to-check-remote-server-or-website/
  * @link http://jp2.php.net/manual/ja/ref.network.php
  */
-function ping( $host, $port = 80, $timeout = 30 ) {
+function ping( $host, $port = 80, $timeout = TIMEOUT_OF_FETCH ) {
 	$fp = @fsockopen( $host, $port, $errno, $errstr, $timeout );
 	if ( FALSE !== $fp ) {
 		fclose( $fp );
 		return TRUE;
 	} else {
-		debug_log( $errstr, DEBUG_ERR );
+		debug_log( "ping: $errstr", DEBUG_ERR );
 		return FALSE;
 	}
 }
@@ -211,7 +211,7 @@ function parse_host( $url ) {
  * @param int $timeout: Time out in seconds. If 0 then forever.
  * @return string: Strings of Contents.
  */
-function url_get_contents( $url, $timeout = 0 ) {
+function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCH ) {
 	$ch = curl_init( $url );
 	curl_setopt_array( $ch, array(
 		CURLOPT_FAILONERROR    => TRUE,
@@ -224,7 +224,7 @@ function url_get_contents( $url, $timeout = 0 ) {
 	) );
 
 	if ( FALSE === ( $str = curl_exec( $ch ) ) )
-		debug_log( curl_error( $ch ), DEBUG_ERR );
+		debug_log( curl_error( $ch ) . " at $url", DEBUG_ERR );
 
 	curl_close( $ch );
 	return $str;
@@ -241,7 +241,7 @@ function url_get_contents( $url, $timeout = 0 ) {
  * @link http://techblog.ecstudio.jp/tech-tips/php-multi.html
  * @link http://techblog.yahoo.co.jp/architecture/api1_curl_multi/
  */
-function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
+function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL ) {
 	// Prepare multi handle
 	$mh = curl_multi_init(); // PHP 5
 
@@ -294,7 +294,7 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
 	// Get status of each request
 	$res = 0;
 	foreach ( $url_list as $i => $url ) {
-		// CURLOPT_FAILONERROR should be set to true.
+		// CURLOPT_FAILONERROR should be true
 		$err = curl_error( $ch_list[$i] ); // PHP 4 >= 4.0.3, PHP 5
 		if ( empty( $err ) ) {
 			$res++;
@@ -323,7 +323,7 @@ function fetch_multi_urls( $url_list, $timeout = 0, $ua = NULL ) {
  * @link http://www.php.net/manual/en/function.simplexml-load-file.php
  * @link http://php.net/manual/en/function.simplexml-load-string.php
  */
-function get_urls_sitemap( $sitemap, $timeout = 0 ) {
+function get_urls_sitemap( $sitemap, $timeout = TIMEOUT_OF_FETCH ) {
 	// Get contents of sitemap
 	$xml = url_get_contents( $sitemap, $timeout );
 
@@ -411,29 +411,26 @@ function get_split( $requests, $total ) {
 
 // Ignore client aborts and disallow the script to run forever
 ignore_user_abort( TRUE );
-set_time_limit( $options['limit'] );
+set_time_limit( $options['gc'] );
 
 // Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
 	debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
-}
 
-// Wait to finish garbage collection
-sleep( $options['delay'] );
+	// Wait for garbage collection
+	sleep( $options['wait'] );
+}
 
 // Start crawling
 $time = microtime( TRUE );
 
-// millisecond to microsecond
-$options['interval'] *= 1000;
-
 // Get URLs from sitemap
 $urls = array();
-foreach ( $sitemap_urls as $sitemap_url ) {
+foreach ( $sitemap_urls as $url ) {
 	$urls = array_merge(
 		$urls,
-		get_urls_sitemap( $sitemap_url, $options['timeout'] )
+		get_urls_sitemap( $url, $options['timeout'] )
 	);
 }
 
@@ -445,11 +442,9 @@ if ( ! empty( $additional_urls ) )
 $urls = array_unique( $urls );
 
 // Split preloading
-$urls = array_slice(
-	$urls,
-	get_split( $options['split'], count( $urls ) ),
-	$options['split']
-);
+$n = count( $urls );
+$pages = ceil( $n * $options['gc'] / $options['cache'] );
+$urls = array_slice( $urls, get_split( $pages, $n ), $pages );
 
 // Additional UA
 if ( ! empty( $options['agent'] ) )
@@ -457,7 +452,10 @@ if ( ! empty( $options['agent'] ) )
 
 // Set the url for ping
 if ( $options['ping'] )
-	$ping = parse_host( $garbage_collector );
+	$url = parse_host( $garbage_collector );
+
+// millisecond to microsecond
+$options['interval'] *= 1000;
 
 // Fetch URLs
 $n = 0;
@@ -467,7 +465,7 @@ foreach ( $user_agent as $ua ) {
 	while ( count( $pages ) ) {
 		// Reload DNS to reduce 'name lookup timed out'
 		if ( $options['ping'] )
-			ping( $ping['host'], $ping['port'], $options['timeout'] );
+			ping( $url['host'], $url['port'], $options['timeout'] );
 
 		// Fetch pages
 		$t = microtime( TRUE );
@@ -487,5 +485,5 @@ foreach ( $user_agent as $ua ) {
 if ( $options['debug'] ) {
 	$time = microtime( TRUE ) - $time;
 	$treq = $treq ? $n / $treq : 0;
-	debug_log( sprintf( "%3d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ), DEBUG_LOG );
+	debug_log( sprintf( "% 4d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ), DEBUG_LOG );
 }
