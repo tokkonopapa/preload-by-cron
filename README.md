@@ -25,6 +25,10 @@ Call preload.php directly from your server's cron.
 
 	wget -q "http://example.com/preload.php?key=your-secret-key&requests=10&interval=100&debug=1"
 
+or
+
+	php preload.php --key "your-secret-key" --fetches 10 --interval 100 --debug 1
+
 where:
 
 * 'key': A secret string to execute crawl.
@@ -32,9 +36,9 @@ where:
 * 'test': Just test, do not update the next split.
 * 'debug': A level to output to debug log file.
 * 'agent': Additional user agent strings.
-* 'limit': Maximum execution time in seconds.
-* 'delay': Initial delay in seconds to wait garbage collection.
-* 'split': A number of requests per split preloading.
+* 'cache': Cache duration in seconds.
+* 'gc': Interval of garbage collection in seconds.
+* 'wait': Wait in seconds for garbage collection.
 * 'fetches': A number of urls to be fetched in parallel.
 * 'timeout': Timeout in seconds for each fetch.
 * 'interval': Interval in milliseconds between parallel fetches.
@@ -63,7 +67,7 @@ then you should reset the period of garbage collection to `(X - Y)` seconds.
 - [x] additional crawl with smart phone UA.
 - [x] loosely synchronize with cache garbage collection via WP-Cron Control.
 - [x] make a ring buffer for debug log. (0.9)
-- [ ] add options parser for command line. (0.9)
+- [x] add options parser for command line. (0.9)
 
 ### Similar plugins:
 - [AskApache Crazy Cache][ACC]

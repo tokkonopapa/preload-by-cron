@@ -3,13 +3,15 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.9.2
+ * Version: 0.9.3
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
  *
  * @example:
  *     wget -q "http://example.com/preload.php?key=your-secret-key&fetches=10&interval=100&debug=1"
+ * or
+ *     php preload.php --key "your-secret-key" --fetches 10 --interval 100 --debug 1
  *
  * @param $_GET['key']: A secret string to execute crawl.
  * @param $_GET['ping']: Send ping before fetching.
@@ -49,6 +51,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/**
+ * Parse command line options
+ *
+ * @global array $argv
+ */
+if ( isset( $argv ) ) {
+	$_GET = array_merge( $_GET, getopt('', array(
+		'key:',
+		'ping:',
+		'test:',
+		'debug:',
+		'agent:',
+		'cache:',
+		'gc:',
+		'wait:',
+		'fetches:',
+		'timeout:',
+		'interval:',
+	) ); // PHP 4 >= 4.3.0, PHP 5
+}
 
 /**
  * Check secret key
