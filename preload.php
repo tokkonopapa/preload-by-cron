@@ -508,5 +508,5 @@ foreach ( $user_agent as $ua ) {
 if ( $options['debug'] ) {
 	$time = microtime( TRUE ) - $time;
 	$treq = $treq ? $n / $treq : 0;
-	debug_log( sprintf( "% 4d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ), DEBUG_LOG );
+	debug_log( sprintf( "%3d pages | %5.2f sec | %5.2f req/sec", $n, $time, $treq ), DEBUG_LOG );
 }
