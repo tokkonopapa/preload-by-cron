@@ -58,7 +58,7 @@
  * @global array $argv
  */
 if ( isset( $argv ) ) {
-	$_GET = array_merge( $_GET, getopt('', array(
+	$_GET = array_merge( $_GET, getopt( '', array(
 		'key:',
 		'ping:',
 		'test:',
@@ -70,7 +70,7 @@ if ( isset( $argv ) ) {
 		'fetches:',
 		'timeout:',
 		'interval:',
-	) ); // PHP 4 >= 4.3.0, PHP 5
+	) ) ); // PHP 4 >= 4.3.0, PHP 5
 }
 
 /**
