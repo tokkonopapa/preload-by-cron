@@ -128,7 +128,7 @@ $user_agent = array(
 );
 
 // Default settings
-define( 'CACHE_DURATION'       3600 ); // in seconds
+define( 'CACHE_DURATION',      3600 ); // in seconds
 define( 'GARBAGE_COLLECTION',   600 ); // in seconds
 define( 'WAIT_FOR_GC_WPCRON',    10 ); // in seconds
 define( 'FETCHES_IN_PARALLEL',   10 ); // in number
