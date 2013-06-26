@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.9.3
+ * Version: 0.9.4
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -21,11 +21,11 @@
  * @param $_GET['cache']: Cache duration in seconds.
  * @param $_GET['gc']: Interval of garbage collection in seconds.
  * @param $_GET['wait']: Wait in seconds for garbage collection.
- * @param $_GET['fetches']: A number of urls to be fetched in parallel.
+ * @param $_GET['fetches']: A number of urls which will be fetched in parallel.
  * @param $_GET['timeout']: Timeout in seconds for each fetch.
  * @param $_GET['interval']: Interval in milliseconds between parallel fetches.
  *
- * @global string your-secret-key: A secret key.
+ * @global string 'your-secret-key': A secret key.
  * @global string $garbage_collector: url to kick off WP-Cron.
  * @global array $sitemap_urls: list of sitemap url.
  * @global array $additional_urls: list of additional url.
@@ -175,13 +175,14 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 	global $options;
 	if ( $options['debug'] >= $level ) {
 		$msg = date( "Y/m/d,D,H:i:s " ) . trim( $msg );
-		$file = basename( __FILE__, '.php' ) . '.log';
-		$fp = @fopen( $file, 'c+' );
-		$buf = explode( "\n", fread( $fp, filesize( $file ) ) . $msg );
-		$buf = array_slice( $buf, -DEBUG_LEN );
+		$fp = @fopen($file = basename( __FILE__, '.php' ) . '.log', 'c+' ); // PHP 5 >= 5.2.6
+		$stat = @fstat( $fp );
+		$buff = explode( "\n", @fread( $fp, $stat['size'] ) . $msg );
+		$buff = array_slice( $buff, -DEBUG_LEN );
 		@rewind( $fp );
-		@ftruncate( $fp, 0 );
-		@fwrite( $fp, implode( "\n", $buf ) . "\n" );
+		@fwrite( $fp, implode( "\n", $buff ) . "\n" );
+		@fflush( $fp );
+		@ftruncate( $fp, ftell( $fp ) );
 		@fclose( $fp );
 	}
 }
@@ -228,39 +229,12 @@ function parse_host( $url ) {
 }
 
 /**
- * Get contents of specified URL
- *
- * @param mixed $url: URL to be fetched.
- * @param int $timeout: Time out in seconds. If 0 then forever.
- * @return string: Strings of Contents.
- */
-function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCH ) {
-	$ch = curl_init( $url );
-	curl_setopt_array( $ch, array(
-		CURLOPT_FAILONERROR    => TRUE,
-		CURLOPT_RETURNTRANSFER => TRUE,
-		CURLOPT_FOLLOWLOCATION => TRUE,
-		CURLOPT_MAXREDIRS      => 5,
-		CURLOPT_CONNECTTIMEOUT => $timeout,
-		CURLOPT_TIMEOUT        => $timeout,
-		CURLOPT_HEADER         => FALSE,
-	) );
-
-	if ( FALSE === ( $str = curl_exec( $ch ) ) )
-		debug_log( curl_error( $ch ) . " at $url", DEBUG_ERR );
-
-	curl_close( $ch );
-	return $str;
-//	return file_get_contents( $url );
-}
-
-/**
  * Simulate multiple threads request
  *
  * @param array $url_list: Array of URLs to be fetched.
  * @param int $timeout: Time out in seconds. If 0 then forever.
  * @param string $ua: `User-Agent:` header for request.
- * @return array of string: Array of contents.
+ * @return int: A Number of urls which have been fetched successfully.
  * @link http://techblog.ecstudio.jp/tech-tips/php-multi.html
  * @link http://techblog.yahoo.co.jp/architecture/api1_curl_multi/
  */
@@ -285,11 +259,9 @@ function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL ) 
 		// Ignore SSL Certification
 		curl_setopt( $ch_list[$i], CURLOPT_SSL_VERIFYPEER, FALSE );
 
-		// Set timeout
-		if ( $timeout ) {
-			curl_setopt( $ch_list[$i], CURLOPT_CONNECTTIMEOUT, $timeout );
-			curl_setopt( $ch_list[$i], CURLOPT_TIMEOUT, $timeout );
-		}
+		// Set timeout ('0' means indefinitely)
+		curl_setopt( $ch_list[$i], CURLOPT_TIMEOUT, $timeout );
+		curl_setopt( $ch_list[$i], CURLOPT_CONNECTTIMEOUT, $timeout );
 
 		// Set User Agent
 		if ( ! is_null( $ua ) )
@@ -335,6 +307,33 @@ function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL ) 
 	curl_multi_close( $mh ); // PHP 5
 
 	return $res;
+}
+
+/**
+ * Get contents of specified URL
+ *
+ * @param mixed $url: URL to be fetched.
+ * @param int $timeout: Time out in seconds. If 0 then forever.
+ * @return string: Strings of Contents.
+ */
+function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCH ) {
+	$ch = curl_init( $url );
+	curl_setopt_array( $ch, array(
+		CURLOPT_FAILONERROR    => TRUE,
+		CURLOPT_RETURNTRANSFER => TRUE,
+		CURLOPT_FOLLOWLOCATION => TRUE,
+		CURLOPT_MAXREDIRS      => 5,
+		CURLOPT_CONNECTTIMEOUT => $timeout,
+		CURLOPT_TIMEOUT        => $timeout,
+		CURLOPT_HEADER         => FALSE,
+	) );
+
+	if ( FALSE === ( $str = curl_exec( $ch ) ) )
+		debug_log( curl_error( $ch ) . " at $url", DEBUG_ERR );
+
+	curl_close( $ch );
+	return $str;
+//	return file_get_contents( $url );
 }
 
 /**
@@ -390,22 +389,18 @@ function get_option( $file ) {
  * Save options to file
  */
 function update_option( $file, $updates ) {
-	$fp = fopen( $file, "c+" );
+	$fp = fopen( $file, "c" ); // $fp is on the beginning of the file. PHP 5 >= 5.2.6
 
 	// lock exclusively
 	// @link http://php.net/manual/function.flock.php
 	if ( flock( $fp, LOCK_EX ) ) {
-		$data = fread( $fp, length );
-		rewind( $fp );
-		ftruncate( $fp, 0 );
-
 		fwrite( $fp, "<?php \$preload_options = array(\n" );
 		foreach ( $updates as $key => $val ) {
 			fwrite( $fp, "\t'$key' => $val,\n" );
 		}
 		fwrite( $fp, "); ?>" );
-
 		fflush( $fp );
+		ftruncate( $fp, ftell( $fp ) );
 		flock( $fp, LOCK_UN ); // released lock
 	}
 
@@ -413,7 +408,7 @@ function update_option( $file, $updates ) {
 }
 
 /**
- * Get start number to split
+ * Get start number of split preloading
  */
 function get_split( $requests, $total ) {
 	$file = get_option_filename();
@@ -465,9 +460,9 @@ if ( ! empty( $additional_urls ) )
 $urls = array_unique( $urls );
 
 // Split preloading
-$n = count( $urls );
-$pages = ceil( $n * $options['gc'] / $options['cache'] );
-$urls = array_slice( $urls, get_split( $pages, $n ), $pages );
+$t = count( $urls );
+$n = ceil( $t * $options['gc'] / $options['cache'] );
+$urls = array_slice( $urls, get_split( $n, $t ), $n );
 
 // Additional UA
 if ( ! empty( $options['agent'] ) )

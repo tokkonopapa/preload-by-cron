@@ -10,12 +10,12 @@ every page being cached and improve the cache hit ratio. Then your visitors
 always feel your site so fast.
 
 ### Feature:
-This plugin uses `curl_multi` to crawl pages in parallel, so it will generate 
-fresh pages in a short period of time.
+This program uses `curl_multi` to crawl pages in parallel. Then it will 
+generate fresh pages in a short period of time.
 
-Additionally, this plugin has ability to synchronize with garbage collection of 
-some cache plugin. It means that expiration time of each page are aligned and 
-every page is almost always cached.
+Additionally, this program has ability to synchronize with garbage collection 
+of some cache plugin. It means that expiration time of each page are aligned 
+and every page is almost always cached.
 
 Split preloading is supported to reduce the load of your server.
 
@@ -31,24 +31,24 @@ or
 
 where:
 
-* 'key': A secret string to execute crawl.
-* 'ping': Send ping before fetching.
-* 'test': Just test, do not update the next split.
-* 'debug': A level to output to debug log file.
-* 'agent': Additional user agent strings.
-* 'cache': Cache duration in seconds.
-* 'gc': Interval of garbage collection in seconds.
-* 'wait': Wait in seconds for garbage collection.
-* 'fetches': A number of urls to be fetched in parallel.
-* 'timeout': Timeout in seconds for each fetch.
-* 'interval': Interval in milliseconds between parallel fetches.
+* `key`: A secret string to execute crawl.
+* `ping`: Send ping before fetching.
+* `test`: Just test, do not update the next split.
+* `debug`: A level to output to debug log file.
+* `agent`: Additional user agent strings.
+* `cache`: Cache duration in seconds. (3600 sec)
+* `gc`: Interval of garbage collection in seconds. (600 sec)
+* `wait`: Wait in seconds for garbage collection. (10 sec)
+* `fetches`: A number of urls to be fetched in parallel. (10)
+* `timeout`: Timeout in seconds for each fetch. (15 sec)
+* `interval`: Interval in milliseconds between parallel fetches. (250 msec)
 
 ### Configuration:
-* `string your-secret-key`: A secret key.
-* `string $garbage_collector`: url to kick off WP-Cron.
-* `array $sitemap_urls`: list of sitemap url.
-* `array $additional_urls`: list of additional url.
-* `array $user_agent`: user agent list when fetch urls.
+* string `your-secret-key`: A secret key.
+* string `$garbage_collector`: url to kick off WP-Cron.
+* array `$sitemap_urls`: list of sitemap url.
+* array `$additional_urls`: list of additional url.
+* array `$user_agent`: user agent list when fetch urls.
 
 [secret key generator - WordPress API][SKG] is useful for generating `your-secret-key`.
 
@@ -57,17 +57,18 @@ If you set `$garbage_collector` to URL specified by [WP-Cron Control][WCC],
 you can synchronize with cache garbage collection. 
 This feature is highly recommended.
 
-#### Settings:
-If you want to set the period of garbage collection to `X` seconds, 
-and this plugin needs `Y` seconds to crawl whole of your site, 
-then you should reset the period of garbage collection to `(X - Y)` seconds.
+#### Fine settings of your plugin:
+Crawling pages at each preloading needs a certain period of time.
+Let's say it as `D` seconds. If you set the cache duration to `X` seconds, 
+and period of garbage collection to `Y` seconds, you should set those values 
+such as `X - D`, `Y - D` seconds in order to synchronize with this program.
 
 ### Todo:
 - [x] handle errors and exceptions.
 - [x] additional crawl with smart phone UA.
 - [x] loosely synchronize with cache garbage collection via WP-Cron Control.
-- [x] make a ring buffer for debug log. (0.9)
-- [x] add options parser for command line. (0.9)
+- [x] make a ring buffer for debug log. (v0.9)
+- [x] add options parser for command line interface. (v0.9)
 
 ### Similar plugins:
 - [AskApache Crazy Cache][ACC]
@@ -83,3 +84,4 @@ Licensed under the [GPL v2][GPL] or later.
 [ACC]: http://wordpress.org/extend/plugins/askapache-crazy-cache/
 [WMC]: http://wordpress.org/extend/plugins/warm-cache/
 [GEN]: http://wordpress.org/extend/plugins/generate-cache/
+[GPL]: http://www.gnu.org/licenses/gpl-2.0.html
