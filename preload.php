@@ -3,7 +3,7 @@
  * Application Name: Super Preloading By Cron
  * Application URI: https://github.com/tokkonopapa/preload-by-cron
  * Description: A helper function to improve the cache hit ratio.
- * Version: 0.9.4
+ * Version: 1.0.0
  * Author: tokkonopapa
  * Author URI: http://tokkono.cute.coocan.jp/blog/slow/
  * Author Email: tokkonopapa@gmail.com
@@ -11,11 +11,11 @@
  * @example:
  *     wget -q "http://example.com/preload.php?key=your-secret-key&fetches=10&interval=100&debug=1"
  * or
- *     php preload.php --key "your-secret-key" --fetches 10 --interval 100 --debug 1
+ *     php -q preload.php --key "your-secret-key" --fetches 10 --interval 100 --debug 1
  *
  * @param $_GET['key']: A secret string to execute crawl.
- * @param $_GET['ping']: Send ping before fetching.
  * @param $_GET['test']: Just test, do not update the next split.
+ * @param $_GET['retry']: Retry to fetch timed out pages.
  * @param $_GET['debug']: A level to output to debug log file.
  * @param $_GET['agent']: Additional user agent strings.
  * @param $_GET['cache']: Cache duration in seconds.
@@ -53,15 +53,15 @@
  */
 
 /**
- * Parse command line options
+ * Get options from command line interface
  *
  * @global array $argv
  */
 if ( isset( $argv ) ) {
 	$_GET = array_merge( $_GET, getopt( '', array(
 		'key:',
-		'ping:',
 		'test:',
+		'retry:',
 		'debug:',
 		'agent:',
 		'cache:',
@@ -143,8 +143,8 @@ define( 'DEBUG_LEN', 6 * 24 ); // Ring buffer length
 
 // Options settings
 $options = array(
-	'ping'     => FALSE,
 	'test'     => FALSE,
+	'retry'    => FALSE,
 	'debug'    => DEBUG_NON,
 	'agent'    => array(),
 	'cache'    => CACHE_DURATION,
@@ -188,57 +188,17 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
 }
 
 /**
- * Ping by fsockopen()
- *
- * @param string $host: Host name or IP address.
- * @param int $port: Port number.
- * @param int: $timeout: timeout in second.
- * @see http://www.darian-brown.com/php-ping-script-to-check-remote-server-or-website/
- * @link http://jp2.php.net/manual/ja/ref.network.php
- */
-function ping( $host, $port = 80, $timeout = TIMEOUT_OF_FETCH ) {
-	$fp = @fsockopen( $host, $port, $errno, $errstr, $timeout );
-	if ( FALSE !== $fp ) {
-		fclose( $fp );
-		return TRUE;
-	} else {
-		debug_log( "ping: $errstr", DEBUG_ERR );
-		return FALSE;
-	}
-}
-
-/**
- * Parse URL and decompose host information
- *
- * @param string $url: <scheme>://<host><:port>/<path>?<query><#fragment>
- * @return array: host information.
- */
-function parse_host( $url ) {
-	$url = parse_url( $url ); // PHP 4, PHP 5
-
-	if ( 'localhost' === $url['host'] )
-		$url['host'] = '127.0.0.1';
-
-	if ( 'ssl' === $url['scheme'] )
-		$url['host'] = 'ssl://' . $url['host'];
-
-	if ( empty( $url['port'] ) )
-		$url['port'] = 80;
-
-	return $url;
-}
-
-/**
  * Simulate multiple threads request
  *
  * @param array $url_list: Array of URLs to be fetched.
  * @param int $timeout: Time out in seconds. If 0 then forever.
  * @param string $ua: `User-Agent:` header for request.
+ * @param array &$fail: Unfetched urls because of error.
  * @return int: A Number of urls which have been fetched successfully.
  * @link http://techblog.ecstudio.jp/tech-tips/php-multi.html
  * @link http://techblog.yahoo.co.jp/architecture/api1_curl_multi/
  */
-function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL ) {
+function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL, $fail = array() ) {
 	// Prepare multi handle
 	$mh = curl_multi_init(); // PHP 5
 
@@ -296,6 +256,7 @@ function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL ) 
 			debug_log( $url );
 //			debug_log( curl_multi_getcontent( $ch_list[$i] ) );
 		} else {
+			$fail[] = $url;
 			debug_log( "$err at $url", DEBUG_ERR );
 		}
 
@@ -359,6 +320,7 @@ function get_urls_sitemap( $sitemap, $timeout = TIMEOUT_OF_FETCH ) {
 			}
 		}
 	}
+
 	return $urls;
 }
 
@@ -434,7 +396,7 @@ set_time_limit( $options['gc'] );
 // Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
-	debug_log( $msg ); // ex) <!-- 21 queries. 5.268 seconds. -->
+	debug_log( $msg );
 
 	// Wait for garbage collection
 	sleep( $options['wait'] );
@@ -468,10 +430,6 @@ $urls = array_slice( $urls, get_split( $n, $t ), $n );
 if ( ! empty( $options['agent'] ) )
 	$user_agent = array_merge( $user_agent, (array)$options['agent'] );
 
-// Set the url for ping
-if ( $options['ping'] )
-	$url = parse_host( $garbage_collector );
-
 // millisecond to microsecond
 $options['interval'] *= 1000;
 
@@ -480,19 +438,26 @@ $n = 0;
 foreach ( $user_agent as $ua ) {
 	$t = $treq = 0;
 	$pages = $urls;
-	while ( count( $pages ) ) {
-		// Reload DNS to reduce 'name lookup timed out'
-		if ( $options['ping'] )
-			ping( $url['host'], $url['port'], $options['timeout'] );
 
+	while ( count( $pages ) ) {
 		// Fetch pages
+		$retry = array();
 		$t = microtime( TRUE );
 		$n += fetch_multi_urls(
 			array_splice( $pages, 0, $options['fetches'] ),
 			$options['timeout'],
-			$ua
+			$ua,
+			&$retry
 		);
 		$treq += microtime( TRUE ) - $t;
+
+		// Retry
+		if ( $options['retry'] ) {
+			// array_unshift( $pages, $retry ); possibly infinit loop
+			$t = microtime( TRUE );
+			$n += fetch_multi_urls( $retry, $options['timeout'], $ua );
+			$treq += microtime( TRUE ) - $t;
+		}
 
 		// Take a break
 		usleep( $options['interval'] );
