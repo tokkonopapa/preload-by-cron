@@ -452,7 +452,7 @@ foreach ( $user_agent as $ua ) {
 		$treq += microtime( TRUE ) - $t;
 
 		// Retry
-		if ( $options['retry'] ) {
+		if ( $options['retry'] && ! empty( $retry ) ) {
 			// array_unshift( $pages, $retry ); possibly infinit loop
 			$t = microtime( TRUE );
 			$n += fetch_multi_urls( $retry, $options['timeout'], $ua );
