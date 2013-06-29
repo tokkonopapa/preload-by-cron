@@ -38,9 +38,9 @@ where (default value):
 * `cache`: Cache duration in seconds. (3600 sec)
 * `gc`: Interval of garbage collection in seconds. (600 sec)
 * `wait`: Wait in seconds for garbage collection. (10 sec)
-* `fetches`: A number of urls to be fetched in parallel. (10)
-* `timeout`: Timeout in seconds for each fetch. (15 sec)
-* `interval`: Interval in milliseconds between parallel fetches. (250 msec)
+* `fetches`: A number of concurrent connections to fetch. (5)
+* `timeout`: Timeout in seconds for each connection. (10 sec)
+* `interval`: Interval in milliseconds per connections. (500 msec)
 
 ### Configuration:
 * string `your-secret-key`: A secret key.

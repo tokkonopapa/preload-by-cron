@@ -21,9 +21,9 @@
  * @param $_GET['cache']: Cache duration in seconds.
  * @param $_GET['gc']: Interval of garbage collection in seconds.
  * @param $_GET['wait']: Wait in seconds for garbage collection.
- * @param $_GET['fetches']: A number of urls which will be fetched in parallel.
- * @param $_GET['timeout']: Timeout in seconds for each fetch.
- * @param $_GET['interval']: Interval in milliseconds between parallel fetches.
+ * @param $_GET['fetches']: A number of concurrent connections to fetch.
+ * @param $_GET['timeout']: Timeout in seconds for each connection.
+ * @param $_GET['interval']: Interval in milliseconds per connections.
  *
  * @global string 'your-secret-key': A secret key.
  * @global string $garbage_collector: url to kick off WP-Cron.
@@ -128,12 +128,12 @@ $user_agent = array(
 );
 
 // Default settings
-define( 'CACHE_DURATION',      3600 ); // in seconds
-define( 'GARBAGE_COLLECTION',   600 ); // in seconds
-define( 'WAIT_FOR_GC_WPCRON',    10 ); // in seconds
-define( 'FETCHES_IN_PARALLEL',   10 ); // in number
-define( 'TIMEOUT_OF_FETCH',      15 ); // in seconds
-define( 'INTERVAL_OF_FETCHES',  250 ); // in milliseconds
+define( 'CACHE_DURATION',     3600 ); // in seconds
+define( 'GARBAGE_COLLECTION',  600 ); // in seconds
+define( 'WAIT_FOR_GC_WPCRON',   10 ); // in seconds
+define( 'CONCURRENT_FETCHES',    5 ); // in number
+define( 'TIMEOUT_OF_FETCHE',    10 ); // in seconds
+define( 'INTERVAL_OF_FETCHES', 500 ); // in milliseconds
 
 // Level of debug log
 define( 'DEBUG_NON', 0 );
@@ -150,8 +150,8 @@ $options = array(
 	'cache'    => CACHE_DURATION,
 	'gc'       => GARBAGE_COLLECTION,
 	'wait'     => WAIT_FOR_GC_WPCRON,
-	'fetches'  => FETCHES_IN_PARALLEL,
-	'timeout'  => TIMEOUT_OF_FETCH,
+	'fetches'  => CONCURRENT_FETCHES,
+	'timeout'  => TIMEOUT_OF_FETCHE,
 	'interval' => INTERVAL_OF_FETCHES,
 );
 
@@ -198,7 +198,7 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
  * @link http://techblog.ecstudio.jp/tech-tips/php-multi.html
  * @link http://techblog.yahoo.co.jp/architecture/api1_curl_multi/
  */
-function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL, $fail = array() ) {
+function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCHE, $ua = NULL, $fail = array() ) {
 	// Prepare multi handle
 	$mh = curl_multi_init(); // PHP 5
 
@@ -277,7 +277,7 @@ function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCH, $ua = NULL, $
  * @param int $timeout: Time out in seconds. If 0 then forever.
  * @return string: Strings of Contents.
  */
-function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCH ) {
+function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCHE ) {
 	$ch = curl_init( $url );
 	curl_setopt_array( $ch, array(
 		CURLOPT_FAILONERROR    => TRUE,
@@ -306,7 +306,7 @@ function url_get_contents( $url, $timeout = TIMEOUT_OF_FETCH ) {
  * @link http://www.php.net/manual/en/function.simplexml-load-file.php
  * @link http://php.net/manual/en/function.simplexml-load-string.php
  */
-function get_urls_sitemap( $sitemap, $timeout = TIMEOUT_OF_FETCH ) {
+function get_urls_sitemap( $sitemap, $timeout = TIMEOUT_OF_FETCHE ) {
 	// Get contents of sitemap
 	$xml = url_get_contents( $sitemap, $timeout );
 
@@ -449,18 +449,16 @@ foreach ( $user_agent as $ua ) {
 			$ua,
 			&$retry
 		);
-		$treq += microtime( TRUE ) - $t;
 
 		// Retry
 		if ( $options['retry'] && ! empty( $retry ) ) {
 			// array_unshift( $pages, $retry ); possibly infinit loop
-			$t = microtime( TRUE );
 			$n += fetch_multi_urls( $retry, $options['timeout'], $ua );
-			$treq += microtime( TRUE ) - $t;
 		}
 
 		// Take a break
 		usleep( $options['interval'] );
+		$treq += microtime( TRUE ) - $t;
 	}
 }
 
