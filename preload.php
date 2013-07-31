@@ -396,6 +396,11 @@ set_time_limit( $options['gc'] );
 // Call cron job to kick garbage collector
 if ( ! empty( $garbage_collector ) ) {
 	$msg = url_get_contents( $garbage_collector, $options['timeout'] );
+
+	// Retry once
+	if ( FALSE === $msg && $options['retry'] )
+		$msg = url_get_contents( $garbage_collector, $options['timeout'] );
+
 	debug_log( $msg );
 
 	// Wait for garbage collection
