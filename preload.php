@@ -198,7 +198,7 @@ function debug_log( $msg, $level = DEBUG_LOG ) {
  * @link http://techblog.ecstudio.jp/tech-tips/php-multi.html
  * @link http://techblog.yahoo.co.jp/architecture/api1_curl_multi/
  */
-function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCHE, $ua = NULL, $fail = array() ) {
+function fetch_multi_urls( $url_list, $timeout = TIMEOUT_OF_FETCHE, $ua = NULL, &$fail = array() ) {
 	// Prepare multi handle
 	$mh = curl_multi_init(); // PHP 5
 
@@ -452,7 +452,7 @@ foreach ( $user_agent as $ua ) {
 			array_splice( $pages, 0, $options['fetches'] ),
 			$options['timeout'],
 			$ua,
-			&$retry
+			$retry
 		);
 
 		// Retry
